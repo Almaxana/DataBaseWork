@@ -1,0 +1,10 @@
+CREATE INDEX subcategory_name_index ON subcategory(name);
+CREATE INDEX products_brand_index ON products(brand);
+CREATE INDEX orders_creation_data_index ON orders(order_creation_data);
+CREATE INDEX orders_users ON orders(user_id);
+CREATE INDEX products_name_index ON products(name);
+CREATE INDEX category_name_index ON category(name);
+CREATE INDEX subcategory_category_index ON subcategory(category_id);
+CREATE INDEX products_subcategory_index ON products(subcategory_id);
+CREATE INDEX products_order_index ON products(order_id);
+CREATE INDEX review_product_index ON product_review(product_id);

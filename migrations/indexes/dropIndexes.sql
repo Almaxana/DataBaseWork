@@ -1,0 +1,10 @@
+DROP INDEX subcategory_name_index ;
+DROP INDEX products_brand_index ;
+DROP INDEX orders_creation_data_index;
+DROP INDEX orders_users ;
+DROP INDEX products_name_index ;
+DROP INDEX category_name_index ;
+DROP INDEX subcategory_category_index ;
+DROP INDEX products_subcategory_index ;
+DROP INDEX products_order_index ;
+DROP INDEX review_product_index ;

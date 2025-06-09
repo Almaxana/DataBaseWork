@@ -1,0 +1,171 @@
+version: "3.8"
+
+networks:
+    demo:
+
+services:
+  db:
+    build: ./migrations
+    restart: always
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - LAST_MIGRATION_NUMBER=${LAST_MIGRATION_NUMBER:-3}
+      - USERS_NUMBER=${USERS_NUMBER:-5}
+    ports:
+      - 5432:5432
+    container_name: db
+    volumes:
+      - ./migrations:/docker-entrypoint-initdb.d
+      - db_volume:/var/lib/postgresql/data
+
+
+
+  insert:
+    build: ./py
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - DATA_TUPLES_NUMBER=${DATA_TUPLES_NUMBER:-100}
+      - LAST_MIGRATION_NUMBER=${LAST_MIGRATION_NUMBER:-3}
+      - EXPLAIN_START_QUERIES_NUMBER=${EXPLAIN_START_QUERIES_NUMBER:-4}
+      - BACKUPS_NUMBER=${BACKUPS_NUMBER:-3}
+      - BACKUPS_INTERVAL=${BACKUPS_INTERVAL:-1}
+    container_name: pyInsert
+    volumes:
+        - ./py:/py_root
+    depends_on:
+        - db
+    stdin_open: true
+    tty: true
+
+  etcd1: &etcd
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    environment:
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380 #url на котором эта нода etcd будет слушать информацию от других нод
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379 #url на котором будет прослушиваться клиентский трафик
+      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380 #предоставляем etcd полную первоначальную конфигурацию кластера, чтобы ноды могли найти друг друга и начать взаимодействовать
+      ETCD_INITIAL_CLUSTER_STATE: new # кластер еще не был настроен или запущен, и не имеет предыдущих данных или состояния => нужно его инициализировать
+      ETCD_INITIAL_CLUSTER_TOKEN: tutorial #общий токен для кластера, чтобы ноды случайно не присоединились к неправильному кластеру
+      ETCD_UNSUPPORTED_ARCH: arm64
+    container_name: demo-etcd1
+    hostname: etcd1
+    command: etcd --name etcd1 --initial-advertise-peer-urls http://etcd1:2380
+
+  etcd2:
+    <<: *etcd
+    container_name: demo-etcd2
+    hostname: etcd2
+    command: etcd --name etcd2 --initial-advertise-peer-urls http://etcd2:2380
+
+  etcd3:
+    <<: *etcd
+    container_name: demo-etcd3
+    hostname: etcd3
+    command: etcd --name etcd3 --initial-advertise-peer-urls http://etcd3:2380
+
+  haproxy: # балансировка нагрузки на реплики и единая точка входа (перенаправляет на master)
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: patroni/docker/patroni.env
+    hostname: haproxy
+    container_name: demo-haproxy
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    command: haproxy
+    environment: &haproxy_env
+      ETCDCTL_ENDPOINTS: http://etcd1:2379,http://etcd2:2379,http://etcd3:2379
+      PATRONI_ETCD3_HOSTS: "'etcd1:2379','etcd2:2379','etcd3:2379'"
+      PATRONI_SCOPE: demo
+
+  patroni1:
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: patroni/docker/patroni.env
+    hostname: patroni1
+    container_name: patroni1
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni1
+
+  patroni2:
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: patroni/docker/patroni.env
+    hostname: patroni2
+    container_name: patroni2
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni2
+
+
+  patroni3:
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: patroni/docker/patroni.env
+    hostname: patroni3
+    container_name: patroni3
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni3
+
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    networks: [ demo ]
+    ports:
+      - 3000:3000
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - 9090:9090
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks: [ demo ]
+
+  postgres-exporter1:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter1
+    ports:
+      - 9187:9187
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@patroni1:5432/postgres?sslmode=disable"
+    links:
+      - patroni1
+      - prometheus
+    networks: [ demo ]
+
+  postgres-exporter2:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter2
+    ports:
+      - 9188:9187
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@patroni2:5432/postgres?sslmode=disable"
+    links:
+      - patroni2
+      - prometheus
+    networks: [ demo ]
+
+  postgres-exporter3:
+    image: prometheuscommunity/postgres-exporter
+    container_name: postgres-exporter3
+    ports:
+      - 9189:9187
+    environment:
+      DATA_SOURCE_NAME: "postgresql://postgres:postgres@patroni3:5432/postgres?sslmode=disable"
+    links:
+      - patroni3
+      - prometheus
+    networks: [ demo ]
+
+volumes:
+  migrations:
+  db_volume:

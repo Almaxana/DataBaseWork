@@ -1,0 +1,4 @@
+#!/bin/bash
+docker-compose down
+docker volume rm docker_db_volume
+docker volume rm docker_migrations
