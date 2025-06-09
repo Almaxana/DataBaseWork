@@ -31,7 +31,7 @@
  
 
 #### 2.2 Заполннеие таблиц данными
-После создания таблицы заполняются тестовыми данными. Для этого есть отдельный контейнер ```insert```. При его старте запускается [start_insert_migrations.py](https://github.com/Almaxana/DataBaseWork/blob/main/py/start_insert_migrations.py), который в свою очередь для каждой таблицы запускает один из [скриптов](https://github.com/Almaxana/DataBaseWork/tree/main/py/py_migrations), генерирующий данные для добавления в БД. Кол-во записей для генерации можно передать через [env](https://github.com/Almaxana/DataBaseWork/blob/main/.env).
+После создания таблицы заполняются тестовыми данными. Для этого есть отдельный контейнер ```pyInsert``` (side car). При его старте запускается [start_insert_migrations.py](https://github.com/Almaxana/DataBaseWork/blob/main/py/start_insert_migrations.py), который в свою очередь для каждой таблицы запускает один из [скриптов](https://github.com/Almaxana/DataBaseWork/tree/main/py/py_migrations), генерирующий данные для добавления в БД. Кол-во записей для генерации можно передать через [env](https://github.com/Almaxana/DataBaseWork/blob/main/.env).
 
 
 
