@@ -18,7 +18,7 @@
 #### 2.1 Развертывание и Создание отношений
 БД развернута в контенере ```db```, который описан в сервисе ```db``` в  [docker-compose.yml](https://github.com/Almaxana/DataBaseWork/blob/main/docker-compose.yml).    
 
-При создании нового контейнера миграции автоматически запускается скрипт [creation.sh](https://github.com/Almaxana/DataBaseWork/blob/main/migrations/creation.sh), который в свою очередь запускает идемпотентные файлы [миграции](https://github.com/Almaxana/DataBaseWork/tree/main/migrations/numbered_migrations) по созданию отношений (1.01 - 1.11), пользователей и ролей (1.12 - 1.16). Через [env](https://github.com/Almaxana/DataBaseWork/blob/main/.env) есть возможность передать версию, до которой будут происходить миграции.
+При создании нового контейнера автоматически запускается скрипт [creation.sh](https://github.com/Almaxana/DataBaseWork/blob/main/migrations/creation.sh), который в свою очередь запускает идемпотентные файлы [миграции](https://github.com/Almaxana/DataBaseWork/tree/main/migrations/numbered_migrations) по созданию отношений (1.01 - 1.11), пользователей и ролей (1.12 - 1.16). Через [env](https://github.com/Almaxana/DataBaseWork/blob/main/.env) есть возможность передать версию, до которой будут происходить миграции.
 
 Роли:
  - reader (может только читать данные из таблиц, но не изменять их)
